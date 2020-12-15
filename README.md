@@ -1,0 +1,1 @@
+# scs-cmake-helper
