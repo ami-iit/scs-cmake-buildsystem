@@ -1,3 +1,6 @@
+# Copyright (C) 2020 Istituto Italiano di Tecnologia (IIT). All rights reserved.
+# This software may be modified and distributed under the terms of the MIT License
+
 cmake_minimum_required(VERSION 3.5)
 
 project(scs
@@ -106,12 +109,14 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(scs)
 
-
+### Some variables useful for sampling the building process
+# Note that the GPU profile is not compiled.
 set(LINSYS linsys)
 set(DIRSRC ${LINSYS}/cpu/direct)
 set(INDIRSRC ${LINSYS}/cpu/indirect)
 set(EXTERNAL ${LINSYS}/external)
 
+# Common source files
 set(${PROJECT_NAME}_SRC
   ${scs_SOURCE_DIR}/src/aa.c
   ${scs_SOURCE_DIR}/src/cones.c
@@ -124,6 +129,7 @@ set(${PROJECT_NAME}_SRC
   ${scs_SOURCE_DIR}/src/util.c
   ${scs_SOURCE_DIR}/${LINSYS}/amatrix.c)
 
+# Common header files
 set(${PROJECT_NAME}_HDR
   ${scs_SOURCE_DIR}/include/aa.h
   ${scs_SOURCE_DIR}/include/cones.h
@@ -143,15 +149,18 @@ file(GLOB ${PROJECT_NAME}_AMD_EXTERNAL_SRC
   ${scs_SOURCE_DIR}/${EXTERNAL}/amd/*.c
   )
 
+# get all the h file in amd/external
 file(GLOB ${PROJECT_NAME}_AMD_EXTERNAL_HDR
   ${scs_SOURCE_DIR}/${EXTERNAL}/amd/*.h
   )
 
+# get all the c file in amd/external
 file(GLOB ${PROJECT_NAME}_LDL_EXTERNAL_HDR
   ${scs_SOURCE_DIR}/${EXTERNAL}/qdldl/*.h
   )
 
-
+### Direct method
+# Here we compile the direct method library
 set(${PROJECT_NAME}_DIRECT ${PROJECT_NAME}dir)
 add_library(${${PROJECT_NAME}_DIRECT}
   ${${PROJECT_NAME}_HDR}
@@ -170,22 +179,23 @@ target_include_directories(${${PROJECT_NAME}_DIRECT} PUBLIC
   "$<BUILD_INTERFACE:${scs_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/scs>")
 
-
-set_property(GLOBAL APPEND PROPERTY scs_TARGETS ${${PROJECT_NAME}_DIRECT})
+# Compiled with blas and lapack, can solve LPs, SOCPs, SDPs, ECPs, and PCPs
 target_compile_definitions(${${PROJECT_NAME}_DIRECT} PRIVATE -DUSE_LAPACK)
 
+# The library depends on math (m) blas and lapack
 target_link_libraries(${${PROJECT_NAME}_DIRECT} PRIVATE
   m
   blas
   lapack)
 
-
+# Set some properties
 set_target_properties(${${PROJECT_NAME}_DIRECT} PROPERTIES
   VERSION ${scs_VERSION}
   PUBLIC_HEADER "${${PROJECT_NAME}_HDR}")
 
 add_library(scs::${${PROJECT_NAME}_DIRECT} ALIAS ${${PROJECT_NAME}_DIRECT})
 
+# Install the library
 install(TARGETS ${${PROJECT_NAME}_DIRECT}
   EXPORT  ${PROJECT_NAME}
   COMPONENT runtime
@@ -194,7 +204,11 @@ install(TARGETS ${${PROJECT_NAME}_DIRECT}
   RUNTIME          DESTINATION "${CMAKE_INSTALL_BINDIR}"                            COMPONENT bin
   PUBLIC_HEADER    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/scs")
 
+# Add the direct method to the set of the compiled targets
+set_property(GLOBAL APPEND PROPERTY scs_TARGETS ${${PROJECT_NAME}_DIRECT})
 
+### Indirect method
+# Here we compile the indirect method library
 set(${PROJECT_NAME}_INDIRECT ${PROJECT_NAME}indir)
 add_library(${${PROJECT_NAME}_INDIRECT}
   ${${PROJECT_NAME}_HDR}
@@ -207,9 +221,6 @@ add_library(${${PROJECT_NAME}_INDIRECT}
   ${${PROJECT_NAME}_LDL_EXTERNAL_SRC}
   )
 
-set_target_properties(${${PROJECT_NAME}_INDIRECT} PROPERTIES
-  VERSION ${scs_VERSION}
-  PUBLIC_HEADER "${${${PROJECT_NAME}_INDIRECT}_HDR}")
 
 target_include_directories(${${PROJECT_NAME}_INDIRECT} PRIVATE
   "$<BUILD_INTERFACE:${scs_SOURCE_DIR}/${EXTERNAL}/amd;${CMAKE_CURRENT_SOURCE_INDIR}/scs/${EXTERNAL}/qdldl;${scs_SOURCE_DIR}/${INDIRSRC};${scs_SOURCE_DIR}/${LINSYS}>")
@@ -218,14 +229,23 @@ target_include_directories(${${PROJECT_NAME}_INDIRECT} PUBLIC
   "$<BUILD_INTERFACE:${scs_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/scs>")
 
-set_property(GLOBAL APPEND PROPERTY scs_TARGETS ${${PROJECT_NAME}_INDIRECT})
+# Compiled with blas and lapack, can solve LPs, SOCPs, SDPs, ECPs, and PCPs
 target_compile_definitions(${${PROJECT_NAME}_INDIRECT} PRIVATE -DUSE_LAPACK)
 
-target_link_libraries(${${PROJECT_NAME}_INDIRECT} PRIVATE
+# The library depends on math (m) blas and lapack
+target_link_libraries(${${PROJECT_NAME}_INDIRECT} PUBLIC
   m
   blas
   lapack)
 
+# Set some properties
+set_target_properties(${${PROJECT_NAME}_INDIRECT} PROPERTIES
+  VERSION ${scs_VERSION}
+  PUBLIC_HEADER "${${${PROJECT_NAME}_INDIRECT}_HDR}")
+
+add_library(scs::${${PROJECT_NAME}_INDIRECT} ALIAS ${${PROJECT_NAME}_INDIRECT})
+
+# Install the library
 install(TARGETS ${${PROJECT_NAME}_INDIRECT}
   EXPORT  ${PROJECT_NAME}
   COMPONENT runtime
@@ -234,8 +254,11 @@ install(TARGETS ${${PROJECT_NAME}_INDIRECT}
   RUNTIME       DESTINATION "${CMAKE_INSTALL_BINDIR}"                            COMPONENT bin
   PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/scs")
 
-add_library(scs::${${PROJECT_NAME}_INDIRECT} ALIAS ${${PROJECT_NAME}_INDIRECT})
+# Add the indirect method to the set of the compiled targets
+set_property(GLOBAL APPEND PROPERTY scs_TARGETS ${${PROJECT_NAME}_INDIRECT})
 
+### Install the .cmake file.
+# Thanks to thanks file it will be possible to link scs to consumer libraries
 include(InstallBasicPackageFiles)
 install_basic_package_files(${PROJECT_NAME}
   NAMESPACE scs::
@@ -245,7 +268,7 @@ install_basic_package_files(${PROJECT_NAME}
   VARS_PREFIX ${PROJECT_NAME}
   NO_CHECK_REQUIRED_COMPONENTS_MACRO)
 
-## Add the tests
+### Add the tests
 if(BUILD_TESTING)
   add_executable(run_tests_direct  ${scs_SOURCE_DIR}/test/run_tests.c)
   target_link_libraries(run_tests_direct PRIVATE
