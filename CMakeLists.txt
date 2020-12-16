@@ -109,7 +109,7 @@ FetchContent_MakeAvailable(scs)
 
 set(LINSYS linsys)
 set(DIRSRC ${LINSYS}/cpu/direct)
-set(INDIRSRC ${LINSYS}/cpu/direct)
+set(INDIRSRC ${LINSYS}/cpu/indirect)
 set(EXTERNAL ${LINSYS}/external)
 
 set(${PROJECT_NAME}_SRC
