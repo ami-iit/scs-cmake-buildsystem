@@ -1,0 +1,219 @@
+cmake_minimum_required(VERSION 3.5)
+
+project(scs
+  LANGUAGES C
+  VERSION 2.1.2)
+
+# Defines the CMAKE_INSTALL_LIBDIR, CMAKE_INSTALL_BINDIR and many other useful macros.
+# See https://cmake.org/cmake/help/latest/module/GNUInstallDirs.html
+include(GNUInstallDirs)
+
+# Control where libraries and executables are placed during the build.
+# With the following settings executables are placed in <the top level of the
+# build tree>/bin and libraries/archives in <top level of the build tree>/lib.
+# This is particularly useful to run ctests on libraries built on Windows
+# machines: tests, which are executables, are placed in the same folders of
+# dlls, which are treated as executables as well, so that they can properly
+# find the libraries to run. This is a because of missing RPATH on Windows.
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
+
+# To build shared libraries in Windows, we set CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS to TRUE.
+# See https://cmake.org/cmake/help/v3.4/variable/CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS.html
+# See https://blog.kitware.com/create-dlls-on-windows-without-declspec-using-new-cmake-export-all-feature/
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
+# Under MSVC, we set CMAKE_DEBUG_POSTFIX to "d" to add a trailing "d" to library
+# built in debug mode. In this Windows user can compile, build and install the
+# library in both Release and Debug configuration avoiding naming clashes in the
+# installation directories.
+if(MSVC)
+  set(CMAKE_DEBUG_POSTFIX "d")
+endif()
+
+# Build position independent code.
+# Position Independent Code (PIC) is commonly used for shared libraries so that
+# the same shared library code can be loaded in each program address space in a
+# location where it will not overlap with any other uses of such memory.
+# In particular, this option avoids problems occurring when a process wants to
+# load more than one shared library at the same virtual address.
+# Since shared libraries cannot predict where other shared libraries could be
+# loaded, this is an unavoidable problem with the traditional shared library
+# concept.
+# Generating position-independent code is often the default behavior for most
+# modern compilers.
+# Moreover linking a static library that is not built with PIC from a shared
+# library will fail on some compiler/architecture combinations.
+# Further details on PIC can be found here:
+# https://eli.thegreenplace.net/2011/11/03/position-independent-code-pic-in-shared-libraries/
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# Disable C and C++ compiler extensions.
+# C/CXX_EXTENSIONS are ON by default to allow the compilers to use extended
+# variants of the C/CXX language.
+# However, this could expose cross-platform bugs in user code or in the headers
+# of third-party dependencies and thus it is strongly suggested to turn
+# extensions off.
+set(CMAKE_C_EXTENSIONS OFF)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# We use
+# - InstallBasicPackageFiles (http://robotology.github.io/ycm/gh-pages/v0.8/module/InstallBasicPackageFiles.html)
+# - AddUninstallTarget (http://robotology.github.io/ycm/gh-pages/v0.8/module/AddUninstallTarget.html)
+# - AddInstallRPATHSupport (http://robotology.github.io/ycm/gh-pages/v0.8/module/AddInstallRPATHSupport.html)
+# from YCM. Files are under the cmake subdirectory.
+# See https://github.com/robotology/ycm/
+# If you don't want to ship these files with your code (recommended), you can
+# instead depend on YCM.
+# In this case replace the following line with
+# find_package(YCM REQUIRED)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
+### Options
+# Shared/Dynamic or Static library?
+option(BUILD_SHARED_LIBS "Build libraries as shared as opposed to static" ON)
+
+# Enable RPATH support for installed binaries and libraries
+include(AddInstallRPATHSupport)
+add_install_rpath_support(BIN_DIRS "${CMAKE_INSTALL_FULL_BINDIR}"
+  LIB_DIRS "${CMAKE_INSTALL_FULL_LIBDIR}"
+  INSTALL_NAME_DIR "${CMAKE_INSTALL_FULL_LIBDIR}"
+  USE_LINK_PATH)
+
+# Encourage user to specify a build type (e.g. Release, Debug, etc.), otherwise set it to Release.
+if(NOT CMAKE_CONFIGURATION_TYPES)
+  if(NOT CMAKE_BUILD_TYPE)
+    message(STATUS "Setting build type to 'Release' as none was specified.")
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY VALUE "Release")
+  endif()
+endif()
+
+
+## Clone
+include(GitUtils)
+git_clone(
+  PROJECT_NAME   scs
+  GIT_URL        https://github.com/cvxgrp/scs
+  GIT_TAG        v2.1.2
+  DIRECTORY      ${CMAKE_SOURCE_DIR})
+
+
+set(LINSYS linsys)
+set(DIRSRC ${LINSYS}/cpu/direct)
+set(INDIRSRC ${LINSYS}/cpu/direct)
+set(EXTERNAL ${LINSYS}/external)
+
+set(${LIBRARY_TARGET_NAME}_SRC
+  scs/src/aa.c
+  scs/src/cones.c
+  scs/src/ctrlc.c
+  scs/src/linalg.c
+  scs/src/rw.c
+  scs/src/scs.c
+  scs/src/scs_version.c
+  scs/src/util.c
+  scs/${LINSYS}/amatrix.c)
+
+set(${LIBRARY_TARGET_NAME}_HDR
+  scs/include/aa.h
+  scs/include/cones.h
+  scs/include/ctrlc.h
+  scs/include/glbopts.h
+  scs/include/linalg.h
+  scs/include/linsys.h
+  scs/include/rw.h
+  scs/include/scs.h
+  scs/include/scs_blas.h
+  scs/include/util.h
+  scs/${LINSYS}/amatrix.h)
+
+# get all the c file in amd/external
+file(GLOB ${LIBRARY_TARGET_NAME}_AMD_EXTERNAL_SRC
+  scs/${EXTERNAL}/amd/*.c
+  )
+
+file(GLOB ${LIBRARY_TARGET_NAME}_AMD_EXTERNAL_HDR
+  scs/${EXTERNAL}/amd/*.h
+  )
+
+file(GLOB ${LIBRARY_TARGET_NAME}_LDL_EXTERNAL_HDR
+  scs/${EXTERNAL}/qdldl/*.h
+  )
+
+
+set(${LIBRARY_TARGET_NAME}_DIRECT ${LIBRARY_TARGET_NAME}dir)
+add_library(${${LIBRARY_TARGET_NAME}_DIRECT}
+  ${${LIBRARY_TARGET_NAME}_HDR}
+  ${${LIBRARY_TARGET_NAME}_SRC}
+  scs/${DIRSRC}/private.c
+  scs/${DIRSRC}/private.h
+  scs/${EXTERNAL}/qdldl/qdldl.c
+  ${${LIBRARY_TARGET_NAME}_LDL_EXTERNAL_SRC}
+  ${${LIBRARY_TARGET_NAME}_AMD_EXTERNAL_HDR}
+  ${${LIBRARY_TARGET_NAME}_LDL_EXTERNAL_HDR})
+
+target_include_directories(${${LIBRARY_TARGET_NAME}_DIRECT} PRIVATE
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scs/${EXTERNAL}/amd;${CMAKE_CURRENT_SOURCE_DIR}/scs/${EXTERNAL}/qdldl;${CMAKE_CURRENT_SOURCE_DIR}/scs/${DIRSRC};${CMAKE_CURRENT_SOURCE_DIR}/scs/${LINSYS}>")
+
+target_include_directories(${${LIBRARY_TARGET_NAME}_DIRECT} PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scs/include>"
+  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/scs>")
+
+
+set_property(GLOBAL APPEND PROPERTY scs_TARGETS ${${LIBRARY_TARGET_NAME}_DIRECT})
+
+set_target_properties(${${LIBRARY_TARGET_NAME}_DIRECT} PROPERTIES
+  VERSION ${scs_VERSION}
+  PUBLIC_HEADER "${${LIBRARY_TARGET_NAME}_HDR}")
+
+
+install(TARGETS ${${LIBRARY_TARGET_NAME}_DIRECT}
+  EXPORT  ${PROJECT_NAME}
+  COMPONENT runtime
+  LIBRARY          DESTINATION "${CMAKE_INSTALL_LIBDIR}"                            COMPONENT shlib
+  ARCHIVE          DESTINATION "${CMAKE_INSTALL_LIBDIR}"                            COMPONENT lib
+  RUNTIME          DESTINATION "${CMAKE_INSTALL_BINDIR}"                            COMPONENT bin
+  PUBLIC_HEADER    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/scs")
+
+
+set(${LIBRARY_TARGET_NAME}_INDIRECT ${LIBRARY_TARGET_NAME}indir)
+add_library(${${LIBRARY_TARGET_NAME}_INDIRECT}
+  ${${LIBRARY_TARGET_NAME}_HDR}
+  ${${LIBRARY_TARGET_NAME}_SRC}
+  scs/${INDIRSRC}/private.c
+  ${${${LIBRARY_TARGET_NAME}_INDIRECT}_HDR}
+  scs/${EXTERNAL}/qdldl/qdldl.c
+  ${${LIBRARY_TARGET_NAME}_LDL_EXTERNAL_SRC}
+  )
+
+set_target_properties(${${LIBRARY_TARGET_NAME}_INDIRECT} PROPERTIES
+  VERSION ${scs_VERSION}
+  PUBLIC_HEADER "${${${LIBRARY_TARGET_NAME}_INDIRECT}_HDR}")
+
+target_include_directories(${${LIBRARY_TARGET_NAME}_INDIRECT} PRIVATE
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scs/${EXTERNAL}/amd;${CMAKE_CURRENT_SOURCE_INDIR}/scs/${EXTERNAL}/qdldl;${CMAKE_CURRENT_SOURCE_DIR}/scs/${INDIRSRC};${CMAKE_CURRENT_SOURCE_DIR}/scs/${LINSYS}>")
+
+target_include_directories(${${LIBRARY_TARGET_NAME}_INDIRECT} PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scs/include>"
+  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/scs>")
+
+set_property(GLOBAL APPEND PROPERTY scs_TARGETS ${${LIBRARY_TARGET_NAME}_INDIRECT})
+
+install(TARGETS ${${LIBRARY_TARGET_NAME}_INDIRECT}
+  EXPORT  ${PROJECT_NAME}
+  COMPONENT runtime
+  LIBRARY       DESTINATION "${CMAKE_INSTALL_LIBDIR}"                            COMPONENT shlib
+  ARCHIVE       DESTINATION "${CMAKE_INSTALL_LIBDIR}"                            COMPONENT lib
+  RUNTIME       DESTINATION "${CMAKE_INSTALL_BINDIR}"                            COMPONENT bin
+  PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/scs")
+
+
+include(InstallBasicPackageFiles)
+install_basic_package_files(${PROJECT_NAME}
+  NAMESPACE scs::
+  VERSION ${${PROJECT_NAME}_VERSION}
+  TARGETS_PROPERTY scs_TARGETS
+  COMPATIBILITY SameMajorVersion
+  VARS_PREFIX ${PROJECT_NAME}
+  NO_CHECK_REQUIRED_COMPONENTS_MACRO)
