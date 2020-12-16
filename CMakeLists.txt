@@ -93,16 +93,18 @@ endif()
 # Build test related commands?
 option(BUILD_TESTING "Create tests using CMake" OFF)
 if(BUILD_TESTING)
-    enable_testing()
+  enable_testing()
 endif()
 
-## Clone
-include(GitUtils)
-git_clone(
-  PROJECT_NAME   scs
-  GIT_URL        https://github.com/cvxgrp/scs
-  GIT_TAG        v2.1.2
-  DIRECTORY      ${CMAKE_SOURCE_DIR})
+## Clone scs repository
+include(FetchContent)
+FetchContent_Declare(
+  scs
+  GIT_REPOSITORY https://github.com/cvxgrp/scs.git
+  GIT_TAG        v${PROJECT_VERSION}
+  )
+
+FetchContent_MakeAvailable(scs)
 
 
 set(LINSYS linsys)
@@ -111,42 +113,42 @@ set(INDIRSRC ${LINSYS}/cpu/direct)
 set(EXTERNAL ${LINSYS}/external)
 
 set(${PROJECT_NAME}_SRC
-  scs/src/aa.c
-  scs/src/cones.c
-  scs/src/ctrlc.c
-  scs/src/linalg.c
-  scs/src/normalize.c
-  scs/src/rw.c
-  scs/src/scs.c
-  scs/src/scs_version.c
-  scs/src/util.c
-  scs/${LINSYS}/amatrix.c)
+  ${scs_SOURCE_DIR}/src/aa.c
+  ${scs_SOURCE_DIR}/src/cones.c
+  ${scs_SOURCE_DIR}/src/ctrlc.c
+  ${scs_SOURCE_DIR}/src/linalg.c
+  ${scs_SOURCE_DIR}/src/normalize.c
+  ${scs_SOURCE_DIR}/src/rw.c
+  ${scs_SOURCE_DIR}/src/scs.c
+  ${scs_SOURCE_DIR}/src/scs_version.c
+  ${scs_SOURCE_DIR}/src/util.c
+  ${scs_SOURCE_DIR}/${LINSYS}/amatrix.c)
 
 set(${PROJECT_NAME}_HDR
-  scs/include/aa.h
-  scs/include/cones.h
-  scs/include/ctrlc.h
-  scs/include/glbopts.h
-  scs/include/linalg.h
-  scs/include/linsys.h
-  scs/include/normalize.h
-  scs/include/rw.h
-  scs/include/scs.h
-  scs/include/scs_blas.h
-  scs/include/util.h
-  scs/${LINSYS}/amatrix.h)
+  ${scs_SOURCE_DIR}/include/aa.h
+  ${scs_SOURCE_DIR}/include/cones.h
+  ${scs_SOURCE_DIR}/include/ctrlc.h
+  ${scs_SOURCE_DIR}/include/glbopts.h
+  ${scs_SOURCE_DIR}/include/linalg.h
+  ${scs_SOURCE_DIR}/include/linsys.h
+  ${scs_SOURCE_DIR}/include/normalize.h
+  ${scs_SOURCE_DIR}/include/rw.h
+  ${scs_SOURCE_DIR}/include/scs.h
+  ${scs_SOURCE_DIR}/include/scs_blas.h
+  ${scs_SOURCE_DIR}/include/util.h
+  ${scs_SOURCE_DIR}/${LINSYS}/amatrix.h)
 
 # get all the c file in amd/external
 file(GLOB ${PROJECT_NAME}_AMD_EXTERNAL_SRC
-  scs/${EXTERNAL}/amd/*.c
+  ${scs_SOURCE_DIR}/${EXTERNAL}/amd/*.c
   )
 
 file(GLOB ${PROJECT_NAME}_AMD_EXTERNAL_HDR
-  scs/${EXTERNAL}/amd/*.h
+  ${scs_SOURCE_DIR}/${EXTERNAL}/amd/*.h
   )
 
 file(GLOB ${PROJECT_NAME}_LDL_EXTERNAL_HDR
-  scs/${EXTERNAL}/qdldl/*.h
+  ${scs_SOURCE_DIR}/${EXTERNAL}/qdldl/*.h
   )
 
 
@@ -154,18 +156,18 @@ set(${PROJECT_NAME}_DIRECT ${PROJECT_NAME}dir)
 add_library(${${PROJECT_NAME}_DIRECT}
   ${${PROJECT_NAME}_HDR}
   ${${PROJECT_NAME}_SRC}
-  scs/${DIRSRC}/private.c
-  scs/${DIRSRC}/private.h
-  scs/${EXTERNAL}/qdldl/qdldl.c
+  ${scs_SOURCE_DIR}/${DIRSRC}/private.c
+  ${scs_SOURCE_DIR}/${DIRSRC}/private.h
+  ${scs_SOURCE_DIR}/${EXTERNAL}/qdldl/qdldl.c
   ${${PROJECT_NAME}_AMD_EXTERNAL_SRC}
   ${${PROJECT_NAME}_AMD_EXTERNAL_HDR}
   ${${PROJECT_NAME}_LDL_EXTERNAL_HDR})
 
 target_include_directories(${${PROJECT_NAME}_DIRECT} PRIVATE
-  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scs/${EXTERNAL}/amd;${CMAKE_CURRENT_SOURCE_DIR}/scs/${EXTERNAL}/qdldl;${CMAKE_CURRENT_SOURCE_DIR}/scs/${DIRSRC};${CMAKE_CURRENT_SOURCE_DIR}/scs/${LINSYS}>")
+  "$<BUILD_INTERFACE:${scs_SOURCE_DIR}/${EXTERNAL}/amd;${scs_SOURCE_DIR}/${EXTERNAL}/qdldl;${scs_SOURCE_DIR}/${DIRSRC};${scs_SOURCE_DIR}/${LINSYS}>")
 
 target_include_directories(${${PROJECT_NAME}_DIRECT} PUBLIC
-  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scs/include>"
+  "$<BUILD_INTERFACE:${scs_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/scs>")
 
 
@@ -197,9 +199,9 @@ set(${PROJECT_NAME}_INDIRECT ${PROJECT_NAME}indir)
 add_library(${${PROJECT_NAME}_INDIRECT}
   ${${PROJECT_NAME}_HDR}
   ${${PROJECT_NAME}_SRC}
-  scs/${INDIRSRC}/private.c
+  ${scs_SOURCE_DIR}/${INDIRSRC}/private.c
   ${${${PROJECT_NAME}_INDIRECT}_HDR}
-  scs/${EXTERNAL}/qdldl/qdldl.c
+  ${scs_SOURCE_DIR}/${EXTERNAL}/qdldl/qdldl.c
   ${${PROJECT_NAME}_AMD_EXTERNAL_SRC}
   ${${PROJECT_NAME}_AMD_EXTERNAL_HDR}
   ${${PROJECT_NAME}_LDL_EXTERNAL_SRC}
@@ -210,10 +212,10 @@ set_target_properties(${${PROJECT_NAME}_INDIRECT} PROPERTIES
   PUBLIC_HEADER "${${${PROJECT_NAME}_INDIRECT}_HDR}")
 
 target_include_directories(${${PROJECT_NAME}_INDIRECT} PRIVATE
-  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scs/${EXTERNAL}/amd;${CMAKE_CURRENT_SOURCE_INDIR}/scs/${EXTERNAL}/qdldl;${CMAKE_CURRENT_SOURCE_DIR}/scs/${INDIRSRC};${CMAKE_CURRENT_SOURCE_DIR}/scs/${LINSYS}>")
+  "$<BUILD_INTERFACE:${scs_SOURCE_DIR}/${EXTERNAL}/amd;${CMAKE_CURRENT_SOURCE_INDIR}/scs/${EXTERNAL}/qdldl;${scs_SOURCE_DIR}/${INDIRSRC};${scs_SOURCE_DIR}/${LINSYS}>")
 
 target_include_directories(${${PROJECT_NAME}_INDIRECT} PUBLIC
-  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scs/include>"
+  "$<BUILD_INTERFACE:${scs_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/scs>")
 
 set_property(GLOBAL APPEND PROPERTY scs_TARGETS ${${PROJECT_NAME}_INDIRECT})
@@ -244,25 +246,26 @@ install_basic_package_files(${PROJECT_NAME}
   NO_CHECK_REQUIRED_COMPONENTS_MACRO)
 
 ## Add the tests
-add_executable(run_tests_direct scs/test/run_tests.c)
-target_link_libraries(run_tests_direct PRIVATE
-  scs::scsdir)
-target_include_directories(run_tests_direct PRIVATE
-  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scs/test;${CMAKE_CURRENT_SOURCE_DIR}/scs/include;${CMAKE_CURRENT_SOURCE_DIR}/scs/${LINSYS}>")
+if(BUILD_TESTING)
+  add_executable(run_tests_direct  ${scs_SOURCE_DIR}/test/run_tests.c)
+  target_link_libraries(run_tests_direct PRIVATE
+    scs::scsdir)
+  target_include_directories(run_tests_direct PRIVATE
+    "$<BUILD_INTERFACE:${scs_SOURCE_DIR}/test;${scs_SOURCE_DIR}/include;${scs_SOURCE_DIR}/${LINSYS}>")
 
-add_test(NAME run_tests_direct
-  COMMAND run_tests_direct
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scs
-  )
+  add_test(NAME run_tests_direct
+    COMMAND run_tests_direct
+    WORKING_DIRECTORY ${scs_SOURCE_DIR}
+    )
 
-## Add the tests
-add_executable(run_tests_indirect scs/test/run_tests.c)
-target_link_libraries(run_tests_indirect PRIVATE
-  scs::scsindir)
-target_include_directories(run_tests_indirect PRIVATE
-  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scs/test;${CMAKE_CURRENT_SOURCE_DIR}/scs/include;${CMAKE_CURRENT_SOURCE_DIR}/scs/${LINSYS}>")
+  add_executable(run_tests_indirect  ${scs_SOURCE_DIR}/test/run_tests.c)
+  target_link_libraries(run_tests_indirect PRIVATE
+    scs::scsindir)
+  target_include_directories(run_tests_indirect PRIVATE
+    "$<BUILD_INTERFACE:${scs_SOURCE_DIR}/test;${scs_SOURCE_DIR}/include;${scs_SOURCE_DIR}/${LINSYS}>")
 
-add_test(NAME run_tests_indirect
-  COMMAND run_tests_indirect
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scs
-  )
+  add_test(NAME run_tests_indirect
+    COMMAND run_tests_indirect
+    WORKING_DIRECTORY ${scs_SOURCE_DIR}
+    )
+endif()
