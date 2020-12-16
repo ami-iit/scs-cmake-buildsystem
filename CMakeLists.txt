@@ -104,24 +104,26 @@ set(DIRSRC ${LINSYS}/cpu/direct)
 set(INDIRSRC ${LINSYS}/cpu/direct)
 set(EXTERNAL ${LINSYS}/external)
 
-set(${LIBRARY_TARGET_NAME}_SRC
+set(${PROJECT_NAME}_SRC
   scs/src/aa.c
   scs/src/cones.c
   scs/src/ctrlc.c
   scs/src/linalg.c
+  scs/src/normalize.c
   scs/src/rw.c
   scs/src/scs.c
   scs/src/scs_version.c
   scs/src/util.c
   scs/${LINSYS}/amatrix.c)
 
-set(${LIBRARY_TARGET_NAME}_HDR
+set(${PROJECT_NAME}_HDR
   scs/include/aa.h
   scs/include/cones.h
   scs/include/ctrlc.h
   scs/include/glbopts.h
   scs/include/linalg.h
   scs/include/linsys.h
+  scs/include/normalize.h
   scs/include/rw.h
   scs/include/scs.h
   scs/include/scs_blas.h
@@ -129,46 +131,54 @@ set(${LIBRARY_TARGET_NAME}_HDR
   scs/${LINSYS}/amatrix.h)
 
 # get all the c file in amd/external
-file(GLOB ${LIBRARY_TARGET_NAME}_AMD_EXTERNAL_SRC
+file(GLOB ${PROJECT_NAME}_AMD_EXTERNAL_SRC
   scs/${EXTERNAL}/amd/*.c
   )
 
-file(GLOB ${LIBRARY_TARGET_NAME}_AMD_EXTERNAL_HDR
+file(GLOB ${PROJECT_NAME}_AMD_EXTERNAL_HDR
   scs/${EXTERNAL}/amd/*.h
   )
 
-file(GLOB ${LIBRARY_TARGET_NAME}_LDL_EXTERNAL_HDR
+file(GLOB ${PROJECT_NAME}_LDL_EXTERNAL_HDR
   scs/${EXTERNAL}/qdldl/*.h
   )
 
 
-set(${LIBRARY_TARGET_NAME}_DIRECT ${LIBRARY_TARGET_NAME}dir)
-add_library(${${LIBRARY_TARGET_NAME}_DIRECT}
-  ${${LIBRARY_TARGET_NAME}_HDR}
-  ${${LIBRARY_TARGET_NAME}_SRC}
+set(${PROJECT_NAME}_DIRECT ${PROJECT_NAME}dir)
+add_library(${${PROJECT_NAME}_DIRECT}
+  ${${PROJECT_NAME}_HDR}
+  ${${PROJECT_NAME}_SRC}
   scs/${DIRSRC}/private.c
   scs/${DIRSRC}/private.h
   scs/${EXTERNAL}/qdldl/qdldl.c
-  ${${LIBRARY_TARGET_NAME}_LDL_EXTERNAL_SRC}
-  ${${LIBRARY_TARGET_NAME}_AMD_EXTERNAL_HDR}
-  ${${LIBRARY_TARGET_NAME}_LDL_EXTERNAL_HDR})
+  ${${PROJECT_NAME}_AMD_EXTERNAL_SRC}
+  ${${PROJECT_NAME}_AMD_EXTERNAL_HDR}
+  ${${PROJECT_NAME}_LDL_EXTERNAL_HDR})
 
-target_include_directories(${${LIBRARY_TARGET_NAME}_DIRECT} PRIVATE
+target_include_directories(${${PROJECT_NAME}_DIRECT} PRIVATE
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scs/${EXTERNAL}/amd;${CMAKE_CURRENT_SOURCE_DIR}/scs/${EXTERNAL}/qdldl;${CMAKE_CURRENT_SOURCE_DIR}/scs/${DIRSRC};${CMAKE_CURRENT_SOURCE_DIR}/scs/${LINSYS}>")
 
-target_include_directories(${${LIBRARY_TARGET_NAME}_DIRECT} PUBLIC
+target_include_directories(${${PROJECT_NAME}_DIRECT} PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scs/include>"
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/scs>")
 
 
-set_property(GLOBAL APPEND PROPERTY scs_TARGETS ${${LIBRARY_TARGET_NAME}_DIRECT})
+set_property(GLOBAL APPEND PROPERTY scs_TARGETS ${${PROJECT_NAME}_DIRECT})
+target_compile_definitions(${${PROJECT_NAME}_DIRECT} PRIVATE -DUSE_LAPACK)
 
-set_target_properties(${${LIBRARY_TARGET_NAME}_DIRECT} PROPERTIES
+target_link_libraries(${${PROJECT_NAME}_DIRECT} PRIVATE
+  m
+  blas
+  lapack)
+
+
+set_target_properties(${${PROJECT_NAME}_DIRECT} PROPERTIES
   VERSION ${scs_VERSION}
-  PUBLIC_HEADER "${${LIBRARY_TARGET_NAME}_HDR}")
+  PUBLIC_HEADER "${${PROJECT_NAME}_HDR}")
 
+add_library(scs::${${PROJECT_NAME}_DIRECT} ALIAS ${${PROJECT_NAME}_DIRECT})
 
-install(TARGETS ${${LIBRARY_TARGET_NAME}_DIRECT}
+install(TARGETS ${${PROJECT_NAME}_DIRECT}
   EXPORT  ${PROJECT_NAME}
   COMPONENT runtime
   LIBRARY          DESTINATION "${CMAKE_INSTALL_LIBDIR}"                            COMPONENT shlib
@@ -177,30 +187,38 @@ install(TARGETS ${${LIBRARY_TARGET_NAME}_DIRECT}
   PUBLIC_HEADER    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/scs")
 
 
-set(${LIBRARY_TARGET_NAME}_INDIRECT ${LIBRARY_TARGET_NAME}indir)
-add_library(${${LIBRARY_TARGET_NAME}_INDIRECT}
-  ${${LIBRARY_TARGET_NAME}_HDR}
-  ${${LIBRARY_TARGET_NAME}_SRC}
+set(${PROJECT_NAME}_INDIRECT ${PROJECT_NAME}indir)
+add_library(${${PROJECT_NAME}_INDIRECT}
+  ${${PROJECT_NAME}_HDR}
+  ${${PROJECT_NAME}_SRC}
   scs/${INDIRSRC}/private.c
-  ${${${LIBRARY_TARGET_NAME}_INDIRECT}_HDR}
+  ${${${PROJECT_NAME}_INDIRECT}_HDR}
   scs/${EXTERNAL}/qdldl/qdldl.c
-  ${${LIBRARY_TARGET_NAME}_LDL_EXTERNAL_SRC}
+  ${${PROJECT_NAME}_AMD_EXTERNAL_SRC}
+  ${${PROJECT_NAME}_AMD_EXTERNAL_HDR}
+  ${${PROJECT_NAME}_LDL_EXTERNAL_SRC}
   )
 
-set_target_properties(${${LIBRARY_TARGET_NAME}_INDIRECT} PROPERTIES
+set_target_properties(${${PROJECT_NAME}_INDIRECT} PROPERTIES
   VERSION ${scs_VERSION}
-  PUBLIC_HEADER "${${${LIBRARY_TARGET_NAME}_INDIRECT}_HDR}")
+  PUBLIC_HEADER "${${${PROJECT_NAME}_INDIRECT}_HDR}")
 
-target_include_directories(${${LIBRARY_TARGET_NAME}_INDIRECT} PRIVATE
+target_include_directories(${${PROJECT_NAME}_INDIRECT} PRIVATE
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scs/${EXTERNAL}/amd;${CMAKE_CURRENT_SOURCE_INDIR}/scs/${EXTERNAL}/qdldl;${CMAKE_CURRENT_SOURCE_DIR}/scs/${INDIRSRC};${CMAKE_CURRENT_SOURCE_DIR}/scs/${LINSYS}>")
 
-target_include_directories(${${LIBRARY_TARGET_NAME}_INDIRECT} PUBLIC
+target_include_directories(${${PROJECT_NAME}_INDIRECT} PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scs/include>"
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/scs>")
 
-set_property(GLOBAL APPEND PROPERTY scs_TARGETS ${${LIBRARY_TARGET_NAME}_INDIRECT})
+set_property(GLOBAL APPEND PROPERTY scs_TARGETS ${${PROJECT_NAME}_INDIRECT})
+target_compile_definitions(${${PROJECT_NAME}_INDIRECT} PRIVATE -DUSE_LAPACK)
 
-install(TARGETS ${${LIBRARY_TARGET_NAME}_INDIRECT}
+target_link_libraries(${${PROJECT_NAME}_INDIRECT} PRIVATE
+  m
+  blas
+  lapack)
+
+install(TARGETS ${${PROJECT_NAME}_INDIRECT}
   EXPORT  ${PROJECT_NAME}
   COMPONENT runtime
   LIBRARY       DESTINATION "${CMAKE_INSTALL_LIBDIR}"                            COMPONENT shlib
@@ -208,6 +226,7 @@ install(TARGETS ${${LIBRARY_TARGET_NAME}_INDIRECT}
   RUNTIME       DESTINATION "${CMAKE_INSTALL_BINDIR}"                            COMPONENT bin
   PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/scs")
 
+add_library(scs::${${PROJECT_NAME}_INDIRECT} ALIAS ${${PROJECT_NAME}_INDIRECT})
 
 include(InstallBasicPackageFiles)
 install_basic_package_files(${PROJECT_NAME}
