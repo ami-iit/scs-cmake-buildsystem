@@ -90,6 +90,12 @@ if(NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 
+# Build test related commands?
+option(BUILD_TESTING "Create tests using CMake" OFF)
+if(BUILD_TESTING)
+    enable_testing()
+endif()
+
 ## Clone
 include(GitUtils)
 git_clone(
@@ -236,3 +242,27 @@ install_basic_package_files(${PROJECT_NAME}
   COMPATIBILITY SameMajorVersion
   VARS_PREFIX ${PROJECT_NAME}
   NO_CHECK_REQUIRED_COMPONENTS_MACRO)
+
+## Add the tests
+add_executable(run_tests_direct scs/test/run_tests.c)
+target_link_libraries(run_tests_direct PRIVATE
+  scs::scsdir)
+target_include_directories(run_tests_direct PRIVATE
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scs/test;${CMAKE_CURRENT_SOURCE_DIR}/scs/include;${CMAKE_CURRENT_SOURCE_DIR}/scs/${LINSYS}>")
+
+add_test(NAME run_tests_direct
+  COMMAND run_tests_direct
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scs
+  )
+
+## Add the tests
+add_executable(run_tests_indirect scs/test/run_tests.c)
+target_link_libraries(run_tests_indirect PRIVATE
+  scs::scsindir)
+target_include_directories(run_tests_indirect PRIVATE
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scs/test;${CMAKE_CURRENT_SOURCE_DIR}/scs/include;${CMAKE_CURRENT_SOURCE_DIR}/scs/${LINSYS}>")
+
+add_test(NAME run_tests_indirect
+  COMMAND run_tests_indirect
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/scs
+  )
