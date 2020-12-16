@@ -1,0 +1,12 @@
+# build folder
+build/*
+
+# scs folder
+scs/*
+
+# emacs
+*~
+\#*\#
+
+# Qtcreator
+*.user*
