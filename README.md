@@ -1,4 +1,4 @@
-# scs Cmake Buildsystem <a href="https://isocpp.org"><img src="https://img.shields.io/badge/version-2.1.2-blue" alt="version-2.1.2" /></a> <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="Size" /></a>
+# scs CMake Buildsystem <a href="https://isocpp.org"><img src="https://img.shields.io/badge/version-2.1.2-blue" alt="version-2.1.2" /></a> <a href="./LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="Size" /></a>
 
 ## Overview
 
